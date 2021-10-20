@@ -10,6 +10,7 @@ app = Flask(__name__)
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 ENV = "dev"
 URL = ""
+# create db with name shortner_db and password postgres
 if ENV == "dev":
     app.debug = True
     app.config["SQLALCHEMY_DATABASE_URI"] = 'postgresql://postgres:postgres@localhost/shortner_db'
@@ -51,7 +52,8 @@ my_dict = {}
 
 
 def generateUniqueId():
-    uid = ''.join(secrets.choice(string.ascii_letters + string.digits) for x in range(LENGTH))
+    uid = ''.join(secrets.choice(string.ascii_letters + string.digits)
+                  for x in range(LENGTH))
     return uid
 
 
@@ -63,34 +65,31 @@ def generateUniqueId():
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
+
     if request.method == 'POST':
         mainUrl = str(request.form.get('mainUrl'))
 
         # check if entered url is a valid url
-        if requests.get(mainUrl).status_code != 200 or mainUrl == '':
-            print("here")
-            return render_template("index.html", message="Invalid URL")
-        print("out")
+        # if requests.get(mainUrl).status_code != 200 or mainUrl == '':
+        #     return render_template("index.html", message="Invalid URL")
+
         generatedId = generateUniqueId()
 
-        # Incase unique code already exists
-        # if db.session.query(Shorten).filter(Shorten.generated_url)  is  :
-        #     generatedId = generateUniqueId()
         data = Shorten(mainUrl, generatedId)
         db.session.add(data)
         db.session.commit()
-        return render_template("index.html", data=data, url=URL)
+        return redirect(url_for("index"))
     return render_template("index.html", message="Please Enter URL")
 
 
 # get params for url and check from db to get the original url and redirect
-@app.route('/<string:uniqueId>', methods=['GET'])
+@app.route('/<string:uniqueId>', methods=['GET', 'POST'])
 def getOriginalUrl(uniqueId):
     if request.method == 'GET':
         data = Shorten.query.filter_by(generated_url=uniqueId).first()
-        print(f"originalurl ==> {data.original_url}")
+        original_url = str(data.original_url) + "/"
         # TODO :make redirect work
-        return redirect(data.original_url, 302)
+        return requests.get(original_url)
 
 
 if __name__ == '__main__':
